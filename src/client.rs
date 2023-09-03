@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::time::Duration;
 
 use reqwest::{Client, ClientBuilder, StatusCode};
@@ -5,10 +6,13 @@ use thiserror::Error;
 
 use crate::OutgoingBotMessage;
 
+pub type BotId = str;
+
 const BASE_URL: &'static str = "https://api.groupme.com/v3";
 
 pub struct GroupmeClient {
-    client: Client
+    client: Client,
+    bot_id: String,
 }
 
 #[derive(Debug, Error)]
@@ -24,8 +28,9 @@ impl std::fmt::Display for PostBotMsgError {
 }
 
 impl GroupmeClient {
-    pub fn new() -> Self {
+    pub fn new(bot_id: &BotId) -> Self {
         GroupmeClient {
+            bot_id: bot_id.to_string(),
             client: ClientBuilder::new()
                 .https_only(true)
                 .timeout(Duration::new(10, 0))
@@ -34,17 +39,17 @@ impl GroupmeClient {
         }
     }
 
-    pub async fn post_bot_message(&self, content: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn post_bot_message(&self, content: &str) -> Result<(), Box<dyn Error>> {
         let url = format!("{}/bots/post", BASE_URL);
 
         let body = OutgoingBotMessage {
-            bot_id: "".to_string(),
-            text: "".to_string()
+            bot_id: self.bot_id.to_owned(),
+            text: content.to_string()
         };
 
         let body_str: String = match serde_json::to_string_pretty(&body) {
             Ok(s) => s,
-            Err(e) => return Err(Box::new(PostBotMsgError::ReqBodySerError))
+            Err(_) => return Err(Box::new(PostBotMsgError::ReqBodySerError))
         };
 
         let resp = self.client 
@@ -61,7 +66,14 @@ impl GroupmeClient {
             StatusCode::SERVICE_UNAVAILABLE => {
                 todo!();
             },
-            _ => {
+            StatusCode::ACCEPTED => {
+                Ok(())
+            },
+            StatusCode::NOT_FOUND => {
+                todo!();
+            }
+            unmatched =>  {
+                println!("{unmatched}");
                 todo!();
             }
         }
