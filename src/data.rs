@@ -1,11 +1,13 @@
+use serde::{ Serialize, Deserialize };
 
-// TODO - mark this with the correct macros
-//        to ser into JSON for request Body
-pub struct OutgoingBotMessage<'a> {
-    pub bot_id: &'a str,
-    pub text: &'a str,
+
+#[derive(Serialize, Deserialize)]
+pub struct OutgoingBotMessage {
+    pub bot_id: String,
+    pub text: String,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct GroupMeMessage {
     pub attachments: Option<Vec<String>>,
     pub avatar_url: Option<String>,
